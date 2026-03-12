@@ -6,6 +6,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ProductController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/purchase', [PurchaseController::class, 'store']);
@@ -32,5 +33,7 @@ Route::middleware(['auth:sanctum','role:admin'])->group(function () {
     Route::post('/gateways/{id}/deactivate', [GatewayController::class, 'deactivate']);
 
     Route::patch('/gateways/{id}/priority', [GatewayController::class, 'updatePriority']);
+
+    Route::apiResource('products', ProductController::class);
 
 });
