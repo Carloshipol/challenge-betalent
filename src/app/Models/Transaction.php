@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Client;
 use App\Models\Product;
 use App\Models\Gateway;
@@ -10,6 +11,7 @@ use App\Enums\TransactionStatus;
 
 class Transaction extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'client_id',
         'gateway_id',
