@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\GatewayController;
+use App\Http\Controllers\ClientController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/purchase', [PurchaseController::class, 'store']);
@@ -17,6 +18,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/transactions/{id}/refund', [TransactionController::class, 'refund']);
 
+    Route::get('/clients', [ClientController::class, 'index']);
+
+    Route::get('/clients/{id}', [ClientController::class, 'show']);
 });
 
 Route::middleware(['auth:sanctum','role:admin'])->group(function () {
