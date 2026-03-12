@@ -13,16 +13,13 @@ use App\Services\Gateways\GatewayTwoService;
 
 class PaymentService
 {
-    public function process(array $data)
+    public function process(Transaction $transaction, array $data)
     {
-       
-        $client = Client::firstOrCreate([
-            'email' => $data['client']['email']
-        ], [
-            'name' => $data['client']['name']
-        ]);
+        $client = Client::firstOrCreate(
+            ['email' => $data['client']['email']],
+            ['name' => $data['client']['name']]
+        );
 
-      
         $products = collect($data['products'])->map(function ($item) {
             $product = Product::findOrFail($item['product_id']);
 
@@ -32,20 +29,16 @@ class PaymentService
             ];
         });
 
-      
         $amount = $products->sum(function ($item) {
             return $item['product']->amount * $item['quantity'];
         });
 
-    
-        $transaction = Transaction::create([
+        $transaction->update([
             'client_id' => $client->id,
-            'status' => TransactionStatus::FAILED,
             'amount' => $amount,
             'card_last_numbers' => substr($data['card_number'], -4)
         ]);
 
-       
         foreach ($products as $item) {
             TransactionProduct::create([
                 'transaction_id' => $transaction->id,
@@ -54,7 +47,6 @@ class PaymentService
             ]);
         }
 
-      
         $gateways = Gateway::where('is_active', true)
             ->orderBy('priority')
             ->get();
@@ -63,7 +55,7 @@ class PaymentService
 
             try {
 
-                $service = match($gateway->name) {
+                $service = match ($gateway->name) {
                     'gateway_one' => new GatewayOneService(),
                     'gateway_two' => new GatewayTwoService(),
                 };
@@ -87,10 +79,14 @@ class PaymentService
                     return $transaction;
                 }
 
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 continue;
             }
         }
+
+        $transaction->update([
+            'status' => TransactionStatus::FAILED
+        ]);
 
         throw new \Exception("All gateways failed.");
     }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Client;
 use App\Models\Product;
 use App\Models\Gateway;
+use App\Enums\TransactionStatus;
 
 class Transaction extends Model
 {
@@ -16,6 +17,10 @@ class Transaction extends Model
         'status',
         'amount',
         'card_last_numbers'
+    ];
+
+    protected $casts = [
+        'status' => TransactionStatus::class
     ];
 
     public function client()
