@@ -11,8 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
+       Schema::create('transactions', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('client_id')
+                ->constrained()
+                ->cascadeOnDelete();
+
+            $table->foreignId('gateway_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
+
+            $table->string('external_id')->nullable();
+            $table->string('status');
+
+            $table->integer('amount');
+
+            $table->string('card_last_numbers');
+
             $table->timestamps();
         });
     }
