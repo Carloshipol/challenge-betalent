@@ -2,18 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Payments\RefundService;
+use App\Models\Transaction;
 
 class TransactionController extends Controller
 {
-    public function __construct(
-        private RefundService $refundService
-    ) {}
-
-    public function refund($id)
+    public function index()
     {
-        $transaction = $this->refundService->refund($id);
+        return Transaction::with([
+            'client',
+            'gateway',
+            'products'
+        ])
+        ->latest()
+        ->paginate(10);
+    }
 
-        return response()->json($transaction);
+    public function show($id)
+    {
+        return Transaction::with([
+            'client',
+            'gateway',
+            'products'
+        ])->findOrFail($id);
     }
 }
