@@ -3,8 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Product extends Model
 {
-    //
+    protected $fillable = [
+        'name',
+        'amount'
+    ];
+
+    public function transactions(): BelongsToMany
+    {
+        return $this->belongsToMany(Transaction::class)
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
 }
