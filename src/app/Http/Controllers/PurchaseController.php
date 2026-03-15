@@ -7,7 +7,6 @@ use App\Models\Client;
 use App\Models\Transaction;
 use App\Enums\TransactionStatus;
 use App\Jobs\ProcessPayment;
-use App\Models\Product;
 
 class PurchaseController extends Controller
 {
@@ -20,25 +19,19 @@ class PurchaseController extends Controller
             ['name' => $data['client']['name']]
         );
 
-        $amount = 0;
-
-        foreach ($data['products'] as $item) {
-            $product = Product::findOrFail($item['product_id']);
-            $amount += $product->amount * $item['quantity'];
-        }
-
         $transaction = Transaction::create([
             'client_id' => $client->id,
             'status' => TransactionStatus::PENDING,
-            'amount' => $amount,
+            'amount' => 0,
             'card_last_numbers' => substr($data['card_number'], -4)
         ]);
 
-        ProcessPayment::dispatch($transaction, $data);
+        ProcessPayment::dispatch($transaction->id, $data);
 
-        return response()->json([
+       return response()->json([
+            'message' => 'Payment is being processed',
             'transaction_id' => $transaction->id,
             'status' => $transaction->status
-        ]);
+        ], 201);
     }
 }

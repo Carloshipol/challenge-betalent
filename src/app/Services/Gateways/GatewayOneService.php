@@ -3,17 +3,27 @@
 namespace App\Services\Gateways;
 
 use Illuminate\Support\Facades\Http;
+use Exception;
 
 class GatewayOneService implements GatewayInterface
 {
-    private string $baseUrl = 'http://localhost:3001';
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $this->baseUrl = config('services.gateway_one.url');
+    }
 
     private function authenticate(): string
     {
-        $response = Http::post($this->baseUrl . '/login', [
+        $response = Http::timeout(5)->post($this->baseUrl . '/login', [
             'email' => 'dev@betalent.tech',
             'token' => 'FEC9BB078BF338F464F96B48089EB498'
         ]);
+
+        if (!$response->successful()) {
+            throw new Exception('GatewayOne authentication failed');
+        }
 
         return $response->json()['token'];
     }
@@ -22,7 +32,8 @@ class GatewayOneService implements GatewayInterface
     {
         $token = $this->authenticate();
 
-        $response = Http::withToken($token)
+        $response = Http::timeout(5)
+            ->withToken($token)
             ->post($this->baseUrl . '/transactions', [
                 'amount' => $data['amount'],
                 'name' => $data['name'],
@@ -31,16 +42,27 @@ class GatewayOneService implements GatewayInterface
                 'cvv' => $data['cvv']
             ]);
 
-        return $response->json();
+        $body = $response->json();
+
+        if (!$response->successful() || isset($body['error'])) {
+            throw new Exception('GatewayOne charge failed');
+        }
+
+        return $body;
     }
 
     public function refund(string $transactionId): bool
     {
         $token = $this->authenticate();
 
-        $response = Http::withToken($token)
+        $response = Http::timeout(5)
+            ->withToken($token)
             ->post($this->baseUrl . "/transactions/{$transactionId}/charge_back");
 
-        return $response->successful();
+        if (!$response->successful()) {
+            throw new Exception('GatewayOne refund failed');
+        }
+
+        return true;
     }
 }

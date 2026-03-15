@@ -7,37 +7,47 @@ use App\Services\Payments\PaymentService;
 use App\Enums\TransactionStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 
 class ProcessPayment implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(
-        public Transaction $transaction,
-        public array $payload
-    ) {}
+    public int $transactionId;
+    public array $payload;
 
-    public function handle(PaymentService $paymentService)
+    public function __construct(int $transactionId, array $payload)
     {
-        $this->transaction->update([
+        $this->transactionId = $transactionId;
+        $this->payload = $payload;
+    }
+
+    public function handle(PaymentService $paymentService): void
+    {
+        $transaction = Transaction::findOrFail($this->transactionId);
+
+        $transaction->update([
             'status' => TransactionStatus::PROCESSING
         ]);
 
         try {
 
-            $paymentService->process($this->transaction, $this->payload);
+            $paymentService->process($transaction, $this->payload);
 
-            $this->transaction->update([
+            $transaction->update([
                 'status' => TransactionStatus::SUCCESS
             ]);
 
         } catch (\Throwable $e) {
 
-            $this->transaction->update([
-                'status' => TransactionStatus::FAILED
+            Log::error('Payment processing failed', [
+                'transaction_id' => $transaction->id,
+                'error' => $e->getMessage()
             ]);
 
-            throw $e;
+            $transaction->update([
+                'status' => TransactionStatus::FAILED
+            ]);
         }
     }
 }

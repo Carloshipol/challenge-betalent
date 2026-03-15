@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: betalent-app
+    restart: unless-stopped
+    volumes:
+      - ./src:/var/www
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      gateways:
+        condition: service_started
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: betalent
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      QUEUE_CONNECTION: database
+    command: >
+      sh -c "
+      /wait-for-mysql.sh &&
+      php artisan migrate --seed &&
+      php artisan serve --host=0.0.0.0 --port=8000
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: betalent-queue
+    restart: unless-stopped
+    volumes:
+      - ./src:/var/www
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: >
+      sh -c "
+      /wait-for-mysql.sh &&
+      php artisan queue:work --tries=3 --sleep=3 --timeout=90 --verbose
+      "
+
+  mysql:
+    image: mysql:8
+    container_name: betalent-mysql
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: betalent
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -proot || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  gateways:
+    image: matheusprotzen/gateways-mock
+    container_name: betalent-gateways
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+      - "3002:3002"
+
+volumes:
+  mysql_data:

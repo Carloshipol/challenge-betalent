@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'gateway_one' => [
+        'url' => env('GATEWAY_ONE_URL', 'http://localhost:3001')
+    ],
+
+    'gateway_two' => [
+        'url' => env('GATEWAY_TWO_URL', 'http://localhost:3002')
+    ],
+
 ];

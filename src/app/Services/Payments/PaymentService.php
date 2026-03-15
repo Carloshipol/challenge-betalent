@@ -2,7 +2,6 @@
 
 namespace App\Services\Payments;
 
-use App\Models\Client;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\Gateway;
@@ -15,10 +14,7 @@ class PaymentService
 {
     public function process(Transaction $transaction, array $data)
     {
-        $client = Client::firstOrCreate(
-            ['email' => $data['client']['email']],
-            ['name' => $data['client']['name']]
-        );
+        $client = $transaction->client;
 
         $products = collect($data['products'])->map(function ($item) {
             $product = Product::findOrFail($item['product_id']);
@@ -34,7 +30,6 @@ class PaymentService
         });
 
         $transaction->update([
-            'client_id' => $client->id,
             'amount' => $amount,
             'card_last_numbers' => substr($data['card_number'], -4)
         ]);
@@ -58,6 +53,7 @@ class PaymentService
                 $service = match ($gateway->name) {
                     'gateway_one' => new GatewayOneService(),
                     'gateway_two' => new GatewayTwoService(),
+                    default => throw new \Exception("Gateway {$gateway->name} not supported")
                 };
 
                 $response = $service->charge([
@@ -68,11 +64,11 @@ class PaymentService
                     'cvv' => $data['cvv']
                 ]);
 
-                if ($response) {
+                if (!empty($response['id'])) {
 
                     $transaction->update([
                         'gateway_id' => $gateway->id,
-                        'external_id' => $response['id'] ?? null,
+                        'external_id' => $response['id'],
                         'status' => TransactionStatus::SUCCESS
                     ]);
 
